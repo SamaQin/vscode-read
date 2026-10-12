@@ -1,0 +1,6 @@
+src/**
+tsconfig.json
+工程提示词.md
+out/**/*.map
+*.ts
+*.vsix
