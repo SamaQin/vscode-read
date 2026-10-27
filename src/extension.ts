@@ -123,10 +123,19 @@ function commentText(languageId: string, text: string) {
 function createDecorations() {
   const color = read('textColor', '');
   const opacity = Math.max(0.1, Math.min(1, read('textOpacity', 1)));
-  // 顶层 opacity 只会作用于装饰范围自身，而这里显示的是空范围上的 before 文本，所以必须通过 before 下发；
-  // 扩展宿主只透传 before 的既有属性（不含 opacity），因此与 display 一样并入 textDecoration 注入。
-  return Array.from({ length: 4 }, () => vscode.window.createTextEditorDecorationType({
-    before: { color: color || undefined, textDecoration: `none; display: block; opacity: ${opacity};` }
+  const foreground = color || 'var(--vscode-editor-foreground)';
+  const background = 'var(--vscode-editor-background)';
+  // before 文本默认参与锚点行的行内排版：多个块会互相挤压，并把该行代码推到下一行后与之重叠。
+  // 这里把有内容的两行绝对定位到锚点行及其下一行（top 取 0/100% 的容器高度），
+  // 再用编辑器背景色覆盖这两行原有代码，得到正好两行、互不重叠的显示区。
+  // 注入文本所在的 span 只有文字宽，所以背景宽度必须取 100vw（超出编辑器的部分会被裁剪），否则长代码行会从右侧露出。
+  // 透明度需作用在文字而不是整个盒子，否则背景也会变透明而透出代码，所以用 color-mix 把文字颜色混向背景色。
+  const shared = 'position: absolute; left: 0; width: 100vw; height: 100%; height: 1lh; display: block; line-height: inherit;'
+    + ' pointer-events: none; overflow: visible; z-index: 5;'
+    + ` background-color: ${background};`
+    + ` color: color-mix(in srgb, ${foreground} ${Math.round(opacity * 100)}%, ${background});`;
+  return [0, 1].map(offset => vscode.window.createTextEditorDecorationType({
+    before: { textDecoration: `none; top: ${offset * 100}%; top: ${offset}lh; ${shared}` }
   }));
 }
 
@@ -160,7 +169,7 @@ function apply(editor?: vscode.TextEditor) {
   if (lastRender.get(editor) === renderKey) return;
   lastRender.set(editor, renderKey);
   const range = new vscode.Range(centerLine, 0, centerLine, 0);
-  const virtualLines = [' ', ...lines.map(line => commentText(editor.document.languageId, line)), ' '];
+  const virtualLines = lines.map(line => commentText(editor.document.languageId, line));
   decorations.forEach((decoration, slot) => {
     editor.setDecorations(decoration, [{ range, renderOptions: { before: { contentText: virtualLines[slot] } } }]);
   });
