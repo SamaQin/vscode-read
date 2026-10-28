@@ -485,10 +485,10 @@ export async function activate(context: vscode.ExtensionContext) {
   context.subscriptions.push(vscode.workspace.onDidChangeConfiguration(event => {
     if (!event.affectsConfiguration(section)) return;
     if (event.affectsConfiguration(`${section}.textOpacity`) || event.affectsConfiguration(`${section}.textColor`)) rebuildDecoration();
-    else {
-      clear(vscode.window.activeTextEditor);
-      apply(vscode.window.activeTextEditor);
-    }
+    // 不要先 clear() 再 apply()：配置更新（翻页会连写 currentIndex/chapterIndex/lastOpened）各自触发本回调，
+    // 清空与重设之间只要渲染一帧，被盖住的代码就会闪一下。setDecorations 本身会整体替换旧装饰，直接 apply 即可；
+    // 关闭显示、隐藏等需要清空的场景由 apply() 内部处理。
+    else apply(vscode.window.activeTextEditor);
     refreshUi();
   }));
   try {

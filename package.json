@@ -2,7 +2,7 @@
   "name": "vscode-read",
   "displayName": "VSCode Read",
   "description": "在编辑器视窗中阅读小说，支持章节跳转和持久化进度。",
-  "version": "0.1.9",
+  "version": "0.1.10",
   "publisher": "local",
   "license": "MIT",
   "engines": { "vscode": "^1.85.0" },
